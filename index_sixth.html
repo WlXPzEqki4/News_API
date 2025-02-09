@@ -6,9 +6,12 @@
   <title>News API Interface with Source Category/Country</title>
 
   <!-- Tailwind CSS -->
-  <link href="https://cdnjs.cloudflare.com/ajax/libs/tailwindcss/2.2.19/tailwind.min.css" rel="stylesheet"/>
+  <link
+    href="https://cdnjs.cloudflare.com/ajax/libs/tailwindcss/2.2.19/tailwind.min.css"
+    rel="stylesheet"
+  />
 
-  <!-- Sentiment library for basic sentiment analysis -->
+  <!-- Sentiment library from jsDelivr to avoid MIME issues -->
   <script src="https://cdn.jsdelivr.net/npm/sentiment@5.2.1/dist/sentiment.min.js"></script>
 
   <style>
@@ -31,11 +34,10 @@
       <div class="mb-6">
         <label class="block text-sm font-medium text-gray-600 mb-2">API Key</label>
         <div class="flex gap-2">
-          <!-- Pre-filled key for convenience; replace with your own or remove value= entirely -->
+          <!-- You may leave this blank or pre-fill for convenience -->
           <input
             type="password"
             id="apiKey"
-            value=""
             class="flex-1 border rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
           <button
@@ -177,37 +179,58 @@
         <div class="bg-white p-4 rounded-lg shadow mb-4">
           <div class="grid grid-cols-12 gap-4">
             <div class="col-span-2">
-              <button onclick="sortTable('title')" class="flex items-center gap-2 font-semibold text-gray-700 hover:text-gray-900">
+              <button
+                onclick="sortTable('title')"
+                class="flex items-center gap-2 font-semibold text-gray-700 hover:text-gray-900"
+              >
                 Title <span id="sort-title" class="text-gray-400">↕</span>
               </button>
             </div>
             <div class="col-span-2">
-              <button onclick="sortTable('publication')" class="flex items-center gap-2 font-semibold text-gray-700 hover:text-gray-900">
+              <button
+                onclick="sortTable('publication')"
+                class="flex items-center gap-2 font-semibold text-gray-700 hover:text-gray-900"
+              >
                 Publication <span id="sort-publication" class="text-gray-400">↕</span>
               </button>
             </div>
             <div class="col-span-1">
-              <button onclick="sortTable('author')" class="flex items-center gap-2 font-semibold text-gray-700 hover:text-gray-900">
+              <button
+                onclick="sortTable('author')"
+                class="flex items-center gap-2 font-semibold text-gray-700 hover:text-gray-900"
+              >
                 Author <span id="sort-author" class="text-gray-400">↕</span>
               </button>
             </div>
             <div class="col-span-1">
-              <button onclick="sortTable('country')" class="flex items-center gap-2 font-semibold text-gray-700 hover:text-gray-900">
+              <button
+                onclick="sortTable('country')"
+                class="flex items-center gap-2 font-semibold text-gray-700 hover:text-gray-900"
+              >
                 Country <span id="sort-country" class="text-gray-400">↕</span>
               </button>
             </div>
             <div class="col-span-1">
-              <button onclick="sortTable('category')" class="flex items-center gap-2 font-semibold text-gray-700 hover:text-gray-900">
+              <button
+                onclick="sortTable('category')"
+                class="flex items-center gap-2 font-semibold text-gray-700 hover:text-gray-900"
+              >
                 Category <span id="sort-category" class="text-gray-400">↕</span>
               </button>
             </div>
             <div class="col-span-2">
-              <button onclick="sortTable('date')" class="flex items-center gap-2 font-semibold text-gray-700 hover:text-gray-900">
+              <button
+                onclick="sortTable('date')"
+                class="flex items-center gap-2 font-semibold text-gray-700 hover:text-gray-900"
+              >
                 Published Date <span id="sort-date" class="text-gray-400">↕</span>
               </button>
             </div>
             <div class="col-span-2">
-              <button onclick="sortTable('description')" class="flex items-center gap-2 font-semibold text-gray-700 hover:text-gray-900">
+              <button
+                onclick="sortTable('description')"
+                class="flex items-center gap-2 font-semibold text-gray-700 hover:text-gray-900"
+              >
                 Description <span id="sort-description" class="text-gray-400">↕</span>
               </button>
             </div>
@@ -252,22 +275,33 @@
         }
 
         try {
-          // We simulate an endpoint to validate the API key (dummy /api/news POST call)
+          // Minimal request to /api/news with a trivial 'query' to see if the key is valid:
           const response = await fetch('/api/news', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ apiKey })
+            body: JSON.stringify({ apiKey, query: 'test' })
           });
 
           if (response.ok) {
-            statusDiv.innerHTML = '<span class="text-green-500">✓ API key is valid</span>';
-            searchButton.classList.remove('bg-gray-400', 'hover:bg-gray-500');
-            searchButton.classList.add('bg-blue-500', 'hover:bg-blue-600');
-            searchButton.disabled = false;
-            State.isApiKeyValidated = true;
+            // If the server responds with data.articles, we consider the key valid
+            const data = await response.json();
 
-            // Now fetch all sources so we have category & country data
-            await Api.fetchAllSources(apiKey);
+            if (data.status === 'ok' || data.articles) {
+              statusDiv.innerHTML = '<span class="text-green-500">✓ API key is valid</span>';
+              searchButton.classList.remove('bg-gray-400', 'hover:bg-gray-500');
+              searchButton.classList.add('bg-blue-500', 'hover:bg-blue-600');
+              searchButton.disabled = false;
+              State.isApiKeyValidated = true;
+
+              // Now fetch all sources so we can store category & country
+              await Api.fetchAllSources(apiKey);
+            } else {
+              statusDiv.innerHTML = '<span class="text-red-500">✗ Invalid API key (no articles)</span>';
+              searchButton.classList.remove('bg-blue-500', 'hover:bg-blue-600');
+              searchButton.classList.add('bg-gray-400', 'hover:bg-gray-500');
+              searchButton.disabled = true;
+              State.isApiKeyValidated = false;
+            }
           } else {
             statusDiv.innerHTML = '<span class="text-red-500">✗ Invalid API key</span>';
             searchButton.classList.remove('bg-blue-500', 'hover:bg-blue-600');
@@ -284,12 +318,17 @@
         }
       },
 
+      // Fetch "sources" from the server (which calls NewsAPI server-side).
       async fetchAllSources(apiKey) {
         try {
-          const url = 'https://newsapi.org/v2/sources?apiKey=' + encodeURIComponent(apiKey);
-          const response = await fetch(url);
+          const response = await fetch('/api/sources', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ apiKey })
+          });
           const data = await response.json();
 
+          // Data typically has { status: 'ok', sources: [] }
           if (data.status === 'ok' && data.sources) {
             data.sources.forEach(src => {
               State.sourceDataMap[src.id] = {
@@ -317,28 +356,28 @@
         }
 
         try {
-          // We simulate the actual NewsAPI call via /api/news for demonstration
+          // Call our local /api/news route to fetch articles
           const response = await fetch('/api/news', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
+              apiKey,
               query,
               language,
               sortBy,
               fromDate,
-              toDate,
-              apiKey
+              toDate
             })
           });
 
           const data = await response.json();
 
           if (response.ok) {
-            // Enrich each article with category & country, then clean text, then do sentiment
-            const articles = data.articles.map(article => {
+            const articles = (data.articles || []).map(article => {
               const sourceId = article.source?.id;
-              const enrichedArticle = {
+              return {
                 ...article,
+                // Add category/country from our loaded State.sourceDataMap
                 category: (sourceId && State.sourceDataMap[sourceId])
                   ? State.sourceDataMap[sourceId].category
                   : 'N/A',
@@ -346,27 +385,26 @@
                   ? State.sourceDataMap[sourceId].country
                   : 'N/A'
               };
-              return TextProcessing.cleanAndCombineText(enrichedArticle);
             });
 
             State.currentArticles = articles;
             State.filteredArticles = articles;
 
-            // Perform sentiment analysis
+            // Clean text & run sentiment analysis
+            State.currentArticles.forEach(art => TextProcessing.cleanAndCombineText(art));
             TextProcessing.performSentimentAnalysis(State.currentArticles);
 
-            // Compute word frequency
-            const wordFreq = TextProcessing.computeWordFrequency(articles);
-            console.log('Word Frequency:', wordFreq);
-            State.wordFrequency = wordFreq;
+            // Compute word frequency (optional, for debugging)
+            State.wordFrequency = TextProcessing.computeWordFrequency(articles);
+            console.log('Word Frequency:', State.wordFrequency);
 
-            // Show the results
+            // Display results
             document.getElementById('resultsSection').classList.remove('hidden');
             State.currentSort = { column: null, ascending: true };
             document.querySelectorAll('[id^="sort-"]').forEach(el => { if (el) el.textContent = '↕'; });
             UI.updateTableDisplay();
           } else {
-            alert(`Error: ${data.message}`);
+            alert(`Error: ${data.message || 'Failed to fetch articles'}`);
           }
         } catch (error) {
           alert('Error fetching results');
@@ -443,8 +481,10 @@
       },
 
       sortTable(column) {
+        // Reset all indicators to ↕
         document.querySelectorAll('[id^="sort-"]').forEach(el => el.textContent = '↕');
 
+        // Toggle ascending/descending if the same column is clicked, else set ascending
         if (State.currentSort.column === column) {
           State.currentSort.ascending = !State.currentSort.ascending;
         } else {
@@ -452,6 +492,7 @@
           State.currentSort.ascending = true;
         }
 
+        // Update the indicator arrow
         const indicator = document.getElementById(`sort-${column}`);
         indicator.textContent = State.currentSort.ascending ? '↑' : '↓';
 
@@ -515,10 +556,14 @@
           <div class="bg-white p-4 rounded-lg shadow hover:shadow-md transition-shadow">
             <div class="grid grid-cols-12 gap-4">
               <div class="col-span-2">
-                <h3 class="font-semibold text-gray-800 line-clamp-2">${article.title || 'No title'}</h3>
+                <h3 class="font-semibold text-gray-800 line-clamp-2">
+                  ${article.title || 'No title'}
+                </h3>
               </div>
               <div class="col-span-2">
-                <p class="text-sm text-gray-600">${article.source?.name || 'Unknown source'}</p>
+                <p class="text-sm text-gray-600">
+                  ${article.source?.name || 'Unknown source'}
+                </p>
               </div>
               <div class="col-span-1">
                 <p class="text-sm text-gray-600">${article.author || 'N/A'}</p>
@@ -530,13 +575,23 @@
                 <p class="text-sm text-gray-600">${article.category || 'N/A'}</p>
               </div>
               <div class="col-span-2">
-                <p class="text-sm text-gray-600">${new Date(article.publishedAt).toLocaleDateString()}</p>
+                <p class="text-sm text-gray-600">
+                  ${new Date(article.publishedAt).toLocaleDateString()}
+                </p>
               </div>
               <div class="col-span-2">
-                <p class="text-sm text-gray-600 line-clamp-2">${article.description || 'No description'}</p>
+                <p class="text-sm text-gray-600 line-clamp-2">
+                  ${article.description || 'No description'}
+                </p>
               </div>
               <div class="col-span-1 flex items-center">
-                <a href="${article.url}" target="_blank" class="text-blue-500 hover:underline">Link</a>
+                <a
+                  href="${article.url}"
+                  target="_blank"
+                  class="text-blue-500 hover:underline"
+                >
+                  Link
+                </a>
               </div>
             </div>
           </div>
@@ -559,10 +614,17 @@
 
         paginationDiv.innerHTML = `
           <div class="flex items-center gap-2">
-            <span class="text-sm text-gray-600">Total results: ${State.filteredArticles.length}</span>
+            <span class="text-sm text-gray-600">
+              Total results: ${State.filteredArticles.length}
+            </span>
           </div>
           <div class="flex items-center gap-2">
-            <button onclick="previousPage()" class="px-4 py-2 border rounded-lg hover:bg-gray-100 ${State.currentPage === 1 ? 'opacity-50 cursor-not-allowed' : ''}" ${State.currentPage === 1 ? 'disabled' : ''}>
+            <button
+              onclick="previousPage()"
+              class="px-4 py-2 border rounded-lg hover:bg-gray-100
+              ${State.currentPage === 1 ? 'opacity-50 cursor-not-allowed' : ''}"
+              ${State.currentPage === 1 ? 'disabled' : ''}
+            >
               Previous
             </button>
             <div class="flex items-center gap-2">
@@ -576,7 +638,12 @@
               />
               <span class="text-gray-600">of ${totalPages}</span>
             </div>
-            <button onclick="nextPage()" class="px-4 py-2 border rounded-lg hover:bg-gray-100 ${State.currentPage === totalPages ? 'opacity-50 cursor-not-allowed' : ''}" ${State.currentPage === totalPages ? 'disabled' : ''}>
+            <button
+              onclick="nextPage()"
+              class="px-4 py-2 border rounded-lg hover:bg-gray-100
+              ${State.currentPage === totalPages ? 'opacity-50 cursor-not-allowed' : ''}"
+              ${State.currentPage === totalPages ? 'disabled' : ''}
+            >
               Next
             </button>
           </div>
@@ -620,7 +687,10 @@
        ============================================================ */
     const Exporter = {
       exportToCSV(filteredOnly = false) {
-        const dataToExport = filteredOnly ? State.filteredArticles : State.currentArticles;
+        const dataToExport = filteredOnly
+          ? State.filteredArticles
+          : State.currentArticles;
+
         if (dataToExport.length === 0) {
           alert('No data to export');
           return;
@@ -664,7 +734,10 @@
       },
 
       exportLinksToCSV(filteredOnly = false) {
-        const dataToExport = filteredOnly ? State.filteredArticles : State.currentArticles;
+        const dataToExport = filteredOnly
+          ? State.filteredArticles
+          : State.currentArticles;
+
         if (dataToExport.length === 0) {
           alert('No data to export');
           return;
@@ -754,7 +827,7 @@
     window.nextPage = UI.nextPage;
 
     document.addEventListener('DOMContentLoaded', () => {
-      // Reset sort indicators
+      // Reset sort indicators to ↕
       document.querySelectorAll('[id^="sort-"]').forEach(el => {
         if (el) el.textContent = '↕';
       });
@@ -762,21 +835,3 @@
   </script>
 </body>
 </html>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
