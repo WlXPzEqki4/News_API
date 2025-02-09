@@ -9,7 +9,9 @@
   <link href="https://cdnjs.cloudflare.com/ajax/libs/tailwindcss/2.2.19/tailwind.min.css" rel="stylesheet"/>
 
   <!-- Sentiment library for basic sentiment analysis -->
-  <script src="https://unpkg.com/sentiment@latest"></script>
+  <!-- <script src="https://unpkg.com/sentiment@latest"></script> -->
+  <script src="https://cdn.jsdelivr.net/npm/sentiment@5.2.1/dist/sentiment.min.js"></script>
+
 
   <style>
     .line-clamp-2 {
@@ -255,9 +257,21 @@
 
         try {
           // Quick test call
-          const response = await fetch('https://newsapi.org/v2/top-headlines?country=us&pageSize=1', {
-            headers: { 'Authorization': `Bearer ${apiKey}` }
+          // const response = await fetch('https://newsapi.org/v2/top-headlines?country=us&pageSize=1', {
+          //   headers: { 'Authorization': `Bearer ${apiKey}` }
+          // });
+
+
+
+          const response = await fetch('/api/news', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ apiKey })
           });
+
+
+
+
 
           if (response.ok) {
             statusDiv.innerHTML = '<span class="text-green-500">✓ API key is valid</span>';
@@ -318,16 +332,37 @@
         }
 
         try {
-          const url = new URL('https://newsapi.org/v2/everything');
-          url.searchParams.append('q', query);
-          url.searchParams.append('language', language);
-          url.searchParams.append('sortBy', sortBy);
-          if (fromDate) url.searchParams.append('from', fromDate);
-          if (toDate) url.searchParams.append('to', toDate);
+          // const url = new URL('https://newsapi.org/v2/everything');
+          // url.searchParams.append('q', query);
+          // url.searchParams.append('language', language);
+          // url.searchParams.append('sortBy', sortBy);
+          // if (fromDate) url.searchParams.append('from', fromDate);
+          // if (toDate) url.searchParams.append('to', toDate);
 
-          const response = await fetch(url, {
-            headers: { 'Authorization': `Bearer ${apiKey}` }
+          // const response = await fetch(url, {
+          //   headers: { 'Authorization': `Bearer ${apiKey}` }
+          // });
+
+
+
+
+          const response = await fetch('/api/news', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                  query, language, sortBy, fromDate, toDate, apiKey
+              })
           });
+
+
+
+
+
+
+
+
+
+
           const data = await response.json();
 
           if (response.ok) {
