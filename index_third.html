@@ -1,0 +1,535 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>News API Interface</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/tailwindcss/2.2.19/tailwind.min.css" rel="stylesheet">
+    <style>
+        .line-clamp-2 {
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 min-h-screen p-8">
+    <div class="max-w-6xl mx-auto">
+        <h1 class="text-4xl font-bold mb-8 text-gray-800">News API Testing Interface</h1>
+        
+        <!-- Main Search Section -->
+        <div class="bg-white rounded-lg shadow-lg p-6 mb-8">
+            <!-- API Key Section -->
+            <div class="mb-6">
+                <label class="block text-sm font-medium text-gray-600 mb-2">API Key</label>
+                <div class="flex gap-2">
+                    <input type="password" id="apiKey" class="flex-1 border rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <button onclick="validateApiKey()" class="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition-colors">
+                        Validate Key
+                    </button>
+                </div>
+                <div id="apiKeyStatus" class="mt-2 text-sm"></div>
+            </div>
+
+            <!-- Search Parameters -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                <div>
+                    <label class="block text-sm font-medium text-gray-600 mb-2">Search Query</label>
+                    <input type="text" id="searchQuery" class="w-full border rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium text-gray-600 mb-2">Language</label>
+                    <select id="language" class="w-full border rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        <option value="en">English</option>
+                        <option value="es">Spanish</option>
+                        <option value="fr">French</option>
+                        <option value="de">German</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-600 mb-2">Sort By</label>
+                    <select id="sortBy" class="w-full border rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        <option value="publishedAt">Published Date</option>
+                        <option value="relevancy">Relevancy</option>
+                        <option value="popularity">Popularity</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-600 mb-2">Date Range</label>
+                    <input type="date" id="fromDate" class="w-full border rounded-lg px-4 py-2 mb-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <input type="date" id="toDate" class="w-full border rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                </div>
+            </div>
+
+            <!-- Search Button -->
+            <button 
+                onclick="handleSearchClick()" 
+                id="searchButton"
+                class="w-full bg-gray-400 text-white px-6 py-3 rounded-lg hover:bg-gray-500 transition-colors"
+                disabled
+            >
+                Search News
+            </button>
+
+            <!-- Results Section -->
+            <div id="resultsSection" class="mt-6 hidden">
+                <!-- Filter Controls -->
+                <div class="mb-4 flex flex-wrap gap-4 items-center">
+                    <input 
+                        type="text" 
+                        id="tableSearch" 
+                        placeholder="Filter results..." 
+                        class="flex-grow md:flex-grow-0 border rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        onkeyup="filterTable()"
+                    >
+                    <select 
+                        id="columnFilter" 
+                        class="border rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        onchange="filterTable()"
+                    >
+                        <option value="all">All Columns</option>
+                        <option value="title">Title</option>
+                        <option value="publication">Publication</option>
+                        <option value="author">Author</option>
+                        <option value="date">Published Date</option>
+                        <option value="description">Description</option>
+                    </select>
+                    <select 
+                        id="itemsPerPage" 
+                        class="border rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        onchange="changeItemsPerPage()"
+                    >
+                        <option value="10">10 per page</option>
+                        <option value="25">25 per page</option>
+                        <option value="50">50 per page</option>
+                        <option value="100">100 per page</option>
+                    </select>
+                    <button 
+                        onclick="exportToCSV(true)" 
+                        id="exportFilteredBtn" 
+                        class="hidden bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600 transition-colors"
+                    >
+                        Export Filtered Results
+                    </button>
+                    <button 
+                        onclick="exportToCSV(false)" 
+                        id="exportAllBtn" 
+                        class="bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600 transition-colors"
+                    >
+                        Export All Results
+                    </button>
+                </div>
+
+                <!-- Column Headers -->
+                <div class="bg-white p-4 rounded-lg shadow mb-4">
+                    <div class="grid grid-cols-12 gap-4">
+                        <div class="col-span-3">
+                            <button onclick="sortTable('title')" class="flex items-center gap-2 font-semibold text-gray-700 hover:text-gray-900">
+                                Title <span id="sort-title" class="text-gray-400">↕</span>
+                            </button>
+                        </div>
+                        <div class="col-span-2">
+                            <button onclick="sortTable('publication')" class="flex items-center gap-2 font-semibold text-gray-700 hover:text-gray-900">
+                                Publication <span id="sort-publication" class="text-gray-400">↕</span>
+                            </button>
+                        </div>
+                        <div class="col-span-2">
+                            <button onclick="sortTable('author')" class="flex items-center gap-2 font-semibold text-gray-700 hover:text-gray-900">
+                                Author <span id="sort-author" class="text-gray-400">↕</span>
+                            </button>
+                        </div>
+                        <div class="col-span-2">
+                            <button onclick="sortTable('date')" class="flex items-center gap-2 font-semibold text-gray-700 hover:text-gray-900">
+                                Published Date <span id="sort-date" class="text-gray-400">↕</span>
+                            </button>
+                        </div>
+                        <div class="col-span-2">
+                            <button onclick="sortTable('description')" class="flex items-center gap-2 font-semibold text-gray-700 hover:text-gray-900">
+                                Description <span id="sort-description" class="text-gray-400">↕</span>
+                            </button>
+                        </div>
+                        <div class="col-span-1">
+                            <span class="font-semibold text-gray-700">Link</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Results Grid -->
+                <div class="grid grid-cols-1 gap-4" id="articleGrid"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+
+
+
+
+
+
+
+
+
+
+// Global state management
+let currentArticles = [];
+let filteredArticles = [];
+let currentPage = 1;
+let itemsPerPage = 10;
+let currentSort = { column: null, ascending: true };
+let isApiKeyValidated = false;
+
+// API Key validation
+async function validateApiKey() {
+    const apiKey = document.getElementById('apiKey').value;
+    const statusDiv = document.getElementById('apiKeyStatus');
+    const searchButton = document.getElementById('searchButton');
+    
+    if (!apiKey) {
+        statusDiv.innerHTML = '<span class="text-red-500">Please enter an API key</span>';
+        return;
+    }
+
+    try {
+        const response = await fetch('https://newsapi.org/v2/top-headlines?country=us&pageSize=1', {
+            headers: {
+                'Authorization': `Bearer ${apiKey}`
+            }
+        });
+        
+        if (response.ok) {
+            statusDiv.innerHTML = '<span class="text-green-500">✓ API key is valid</span>';
+            searchButton.classList.remove('bg-gray-400', 'hover:bg-gray-500');
+            searchButton.classList.add('bg-blue-500', 'hover:bg-blue-600');
+            searchButton.disabled = false;
+            isApiKeyValidated = true;
+        } else {
+            statusDiv.innerHTML = '<span class="text-red-500">✗ Invalid API key</span>';
+            searchButton.classList.remove('bg-blue-500', 'hover:bg-blue-600');
+            searchButton.classList.add('bg-gray-400', 'hover:bg-gray-500');
+            searchButton.disabled = true;
+            isApiKeyValidated = false;
+        }
+    } catch (error) {
+        statusDiv.innerHTML = '<span class="text-red-500">✗ Error validating API key</span>';
+        searchButton.classList.remove('bg-blue-500', 'hover:bg-blue-600');
+        searchButton.classList.add('bg-gray-400', 'hover:bg-gray-500');
+        searchButton.disabled = true;
+        isApiKeyValidated = false;
+    }
+}
+
+// Search handling
+function handleSearchClick() {
+    if (!isApiKeyValidated) {
+        const statusDiv = document.getElementById('apiKeyStatus');
+        statusDiv.innerHTML = '<span class="text-red-500">Please validate your API key first</span>';
+        return;
+    }
+    searchNews();
+}
+
+async function searchNews() {
+    const apiKey = document.getElementById('apiKey').value;
+    const query = document.getElementById('searchQuery').value;
+    const language = document.getElementById('language').value;
+    const sortBy = document.getElementById('sortBy').value;
+    const fromDate = document.getElementById('fromDate').value;
+    const toDate = document.getElementById('toDate').value;
+
+    if (!query) {
+        alert('Please enter a search query');
+        return;
+    }
+
+    try {
+        let url = new URL('https://newsapi.org/v2/everything');
+        url.searchParams.append('q', query);
+        url.searchParams.append('language', language);
+        url.searchParams.append('sortBy', sortBy);
+        if (fromDate) url.searchParams.append('from', fromDate);
+        if (toDate) url.searchParams.append('to', toDate);
+
+        const response = await fetch(url, {
+            headers: {
+                'Authorization': `Bearer ${apiKey}`
+            }
+        });
+        
+        const data = await response.json();
+        
+        if (response.ok) {
+            currentArticles = data.articles;
+            filteredArticles = data.articles;
+            document.getElementById('resultsSection').classList.remove('hidden');
+            currentSort = { column: null, ascending: true };
+            document.querySelectorAll('[id^="sort-"]').forEach(el => {
+                if (el) el.textContent = '↕';
+            });
+            updateTableDisplay();
+        } else {
+            alert(`Error: ${data.message}`);
+        }
+    } catch (error) {
+        alert('Error fetching results');
+        console.error('Error:', error);
+    }
+}
+
+// Table filtering
+function filterTable() {
+    const searchTerm = document.getElementById('tableSearch').value.toLowerCase();
+    const filterColumn = document.getElementById('columnFilter').value;
+    
+    filteredArticles = currentArticles.filter(article => {
+        if (filterColumn === 'all') {
+            return (
+                article.title?.toLowerCase().includes(searchTerm) ||
+                article.source.name?.toLowerCase().includes(searchTerm) ||
+                article.author?.toLowerCase().includes(searchTerm) ||
+                article.description?.toLowerCase().includes(searchTerm)
+            );
+        }
+        
+        switch(filterColumn) {
+            case 'title':
+                return article.title?.toLowerCase().includes(searchTerm);
+            case 'publication':
+                return article.source.name?.toLowerCase().includes(searchTerm);
+            case 'author':
+                return article.author?.toLowerCase().includes(searchTerm);
+            case 'date':
+                return article.publishedAt?.toLowerCase().includes(searchTerm);
+            case 'description':
+                return article.description?.toLowerCase().includes(searchTerm);
+            default:
+                return true;
+        }
+    });
+    
+    document.getElementById('exportFilteredBtn').classList.toggle('hidden', 
+        filteredArticles.length === currentArticles.length);
+    
+    currentPage = 1;
+    updateTableDisplay();
+}
+
+// Table sorting
+function sortTable(column) {
+    document.querySelectorAll('[id^="sort-"]').forEach(el => el.textContent = '↕');
+    
+    if (currentSort.column === column) {
+        currentSort.ascending = !currentSort.ascending;
+    } else {
+        currentSort.column = column;
+        currentSort.ascending = true;
+    }
+
+    const indicator = document.getElementById(`sort-${column}`);
+    indicator.textContent = currentSort.ascending ? '↑' : '↓';
+
+    filteredArticles.sort((a, b) => {
+        let valueA, valueB;
+        
+        switch(column) {
+            case 'title':
+                valueA = a.title?.toLowerCase() || '';
+                valueB = b.title?.toLowerCase() || '';
+                break;
+            case 'publication':
+                valueA = a.source.name?.toLowerCase() || '';
+                valueB = b.source.name?.toLowerCase() || '';
+                break;
+            case 'author':
+                valueA = a.author?.toLowerCase() || '';
+                valueB = b.author?.toLowerCase() || '';
+                break;
+            case 'date':
+                valueA = new Date(a.publishedAt || 0);
+                valueB = new Date(b.publishedAt || 0);
+                break;
+            case 'description':
+                valueA = a.description?.toLowerCase() || '';
+                valueB = b.description?.toLowerCase() || '';
+                break;
+            default:
+                return 0;
+        }
+
+        if (valueA < valueB) return currentSort.ascending ? -1 : 1;
+        if (valueA > valueB) return currentSort.ascending ? 1 : -1;
+        return 0;
+    });
+
+    updateTableDisplay();
+}
+
+// Items per page handling
+function changeItemsPerPage() {
+    itemsPerPage = parseInt(document.getElementById('itemsPerPage').value);
+    currentPage = 1;
+    updateTableDisplay();
+}
+
+// Table display
+function updateTableDisplay() {
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const endIndex = startIndex + itemsPerPage;
+    const pageArticles = filteredArticles.slice(startIndex, endIndex);
+    
+    const grid = document.getElementById('articleGrid');
+    grid.innerHTML = pageArticles.map(article => `
+        <div class="bg-white p-4 rounded-lg shadow hover:shadow-md transition-shadow">
+            <div class="grid grid-cols-12 gap-4">
+                <div class="col-span-3">
+                    <h3 class="font-semibold text-gray-800 line-clamp-2">${article.title || 'No title'}</h3>
+                </div>
+                <div class="col-span-2">
+                    <p class="text-sm text-gray-600">${article.source?.name || 'Unknown source'}</p>
+                </div>
+                <div class="col-span-2">
+                    <p class="text-sm text-gray-600">${article.author || 'N/A'}</p>
+                </div>
+                <div class="col-span-2">
+                    <p class="text-sm text-gray-600">${new Date(article.publishedAt).toLocaleDateString()}</p>
+                </div>
+                <div class="col-span-2">
+                    <p class="text-sm text-gray-600 line-clamp-2">${article.description || 'No description'}</p>
+                </div>
+                <div class="col-span-1 flex items-center">
+                    <a href="${article.url}" target="_blank" class="text-blue-500 hover:underline">Link</a>
+                </div>
+            </div>
+        </div>
+    `).join('');
+
+    addPaginationControls();
+}
+
+// Pagination controls
+function addPaginationControls() {
+    const containerDiv = document.getElementById('articleGrid').parentNode;
+    const existingPagination = containerDiv.querySelector('.flex.justify-between');
+    if (existingPagination) {
+        existingPagination.remove();
+    }
+
+    const paginationDiv = document.createElement('div');
+    paginationDiv.className = 'flex justify-between items-center mt-4 bg-white p-4 rounded-lg shadow';
+    
+    const totalPages = Math.ceil(filteredArticles.length / itemsPerPage) || 1;
+    
+    paginationDiv.innerHTML = `
+        <div class="flex items-center gap-2">
+            <span class="text-sm text-gray-600">Total results: ${filteredArticles.length}</span>
+        </div>
+        <div class="flex items-center gap-2">
+            <button onclick="previousPage()" class="px-4 py-2 border rounded-lg hover:bg-gray-100 ${currentPage === 1 ? 'opacity-50 cursor-not-allowed' : ''}" ${currentPage === 1 ? 'disabled' : ''}>
+                Previous
+            </button>
+            <div class="flex items-center gap-2">
+                <input 
+                    type="number" 
+                    id="pageNumberInput" 
+                    min="1" 
+                    max="${totalPages}" 
+                    value="${currentPage}"
+                    class="w-16 border rounded-lg px-2 py-1 text-center"
+                >
+                <span class="text-gray-600">of ${totalPages}</span>
+            </div>
+            <button onclick="nextPage()" class="px-4 py-2 border rounded-lg hover:bg-gray-100 ${currentPage === totalPages ? 'opacity-50 cursor-not-allowed' : ''}" ${currentPage === totalPages ? 'disabled' : ''}>
+                Next
+            </button>
+        </div>
+    `;
+    
+    containerDiv.appendChild(paginationDiv);
+
+    const pageNumberInput = document.getElementById('pageNumberInput');
+    if (pageNumberInput) {
+        pageNumberInput.addEventListener('change', (e) => {
+            goToPage(e.target.value);
+        });
+    }
+}
+
+function nextPage() {
+    const totalPages = Math.ceil(filteredArticles.length / itemsPerPage) || 1;
+    if (currentPage < totalPages) {
+        currentPage++;
+        updateTableDisplay();
+    }
+}
+
+function previousPage() {
+    if (currentPage > 1) {
+        currentPage--;
+        updateTableDisplay();
+    }
+}
+
+function goToPage(pageNumber) {
+    const totalPages = Math.ceil(filteredArticles.length / itemsPerPage) || 1;
+    pageNumber = Math.max(1, Math.min(parseInt(pageNumber), totalPages));
+    currentPage = pageNumber;
+    updateTableDisplay();
+}
+
+// CSV Export
+function exportToCSV(filteredOnly = false) {
+    const dataToExport = filteredOnly ? filteredArticles : currentArticles;
+    
+    if (dataToExport.length === 0) {
+        alert('No data to export');
+        return;
+    }
+
+    const headers = ['Title', 'Publication', 'Author', 'Published Date', 'Description', 'URL', 'Content'];
+    const csvRows = [headers];
+
+    dataToExport.forEach(article => {
+        csvRows.push([
+            article.title || '',
+            article.source?.name || '',
+            article.author || '',
+            article.publishedAt || '',
+            article.description || '',
+            article.url || '',
+            article.content || ''
+        ].map(cell => `"${(cell || '').toString().replace(/"/g, '""')}"`));
+    });
+
+    const csvContent = csvRows.join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = `news_articles_${filteredOnly ? 'filtered_' : ''}${new Date().toISOString()}.csv`;
+    link.click();
+}
+
+// Initialize the table display
+document.addEventListener('DOMContentLoaded', () => {
+    document.querySelectorAll('[id^="sort-"]').forEach(el => {
+        if (el) el.textContent = '↕';
+    });
+});
+
+
+
+
+
+
+
+
+
+
+</script>
+</body>
+</html>
+
+

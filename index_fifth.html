@@ -1,0 +1,701 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>News API Interface with Source Category/Country</title>
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/tailwindcss/2.2.19/tailwind.min.css" rel="stylesheet"/>
+  <style>
+    .line-clamp-2 {
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+  </style>
+</head>
+<body class="bg-gray-100 min-h-screen p-8">
+  <div class="max-w-6xl mx-auto">
+    <h1 class="text-4xl font-bold mb-8 text-gray-800">News API Testing Interface</h1>
+
+    <!-- Main Search Section -->
+    <div class="bg-white rounded-lg shadow-lg p-6 mb-8">
+      <!-- API Key Section -->
+      <div class="mb-6">
+        <label class="block text-sm font-medium text-gray-600 mb-2">API Key</label>
+        <div class="flex gap-2">
+          <!-- Pre-filled key for convenience; replace with your own or remove value= entirely -->
+          <input
+            type="password"
+            id="apiKey"
+            value="791a2ea85e1b470c8620abf40b88dcac"
+            class="flex-1 border rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          />
+          <button
+            onclick="validateApiKey()"
+            class="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition-colors"
+          >
+            Validate Key
+          </button>
+        </div>
+        <div id="apiKeyStatus" class="mt-2 text-sm"></div>
+      </div>
+
+      <!-- Search Parameters -->
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+        <div>
+          <label class="block text-sm font-medium text-gray-600 mb-2">Search Query</label>
+          <input
+            type="text"
+            id="searchQuery"
+            class="w-full border rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          />
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-600 mb-2">Language</label>
+          <select
+            id="language"
+            class="w-full border rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          >
+            <option value="en">English</option>
+            <option value="es">Spanish</option>
+            <option value="fr">French</option>
+            <option value="de">German</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-600 mb-2">Sort By</label>
+          <select
+            id="sortBy"
+            class="w-full border rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          >
+            <option value="publishedAt">Published Date</option>
+            <option value="relevancy">Relevancy</option>
+            <option value="popularity">Popularity</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-600 mb-2">Date Range</label>
+          <input
+            type="date"
+            id="fromDate"
+            class="w-full border rounded-lg px-4 py-2 mb-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          />
+          <input
+            type="date"
+            id="toDate"
+            class="w-full border rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          />
+        </div>
+      </div>
+
+      <!-- Search Button -->
+      <button
+        onclick="handleSearchClick()"
+        id="searchButton"
+        class="w-full bg-gray-400 text-white px-6 py-3 rounded-lg hover:bg-gray-500 transition-colors"
+        disabled
+      >
+        Search News
+      </button>
+
+      <!-- Results Section -->
+      <div id="resultsSection" class="mt-6 hidden">
+        <!-- Filter Controls -->
+        <div class="mb-4 flex flex-wrap gap-4 items-center">
+          <input
+            type="text"
+            id="tableSearch"
+            placeholder="Filter results..."
+            class="flex-grow md:flex-grow-0 border rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            onkeyup="filterTable()"
+          />
+          <select
+            id="columnFilter"
+            class="border rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            onchange="filterTable()"
+          >
+            <option value="all">All Columns</option>
+            <option value="title">Title</option>
+            <option value="publication">Publication</option>
+            <option value="author">Author</option>
+            <option value="country">Country</option>
+            <option value="category">Category</option>
+            <option value="date">Published Date</option>
+            <option value="description">Description</option>
+          </select>
+          <select
+            id="itemsPerPage"
+            class="border rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            onchange="changeItemsPerPage()"
+          >
+            <option value="10">10 per page</option>
+            <option value="25">25 per page</option>
+            <option value="50">50 per page</option>
+            <option value="100">100 per page</option>
+          </select>
+
+          <!-- Export Buttons -->
+          <button
+            onclick="exportToCSV(true)"
+            id="exportFilteredBtn"
+            class="hidden bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600 transition-colors"
+          >
+            Export Filtered Results
+          </button>
+          <button
+            onclick="exportToCSV(false)"
+            id="exportAllBtn"
+            class="bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600 transition-colors"
+          >
+            Export All Results
+          </button>
+          <button
+            onclick="exportLinksToCSV(true)"
+            id="exportLinksFilteredBtn"
+            class="hidden bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition-colors"
+          >
+            Export Filtered Links
+          </button>
+          <button
+            onclick="exportLinksToCSV(false)"
+            id="exportLinksAllBtn"
+            class="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition-colors"
+          >
+            Export All Links
+          </button>
+        </div>
+
+        <!-- Column Headers -->
+        <div class="bg-white p-4 rounded-lg shadow mb-4">
+          <div class="grid grid-cols-12 gap-4">
+            <div class="col-span-2">
+              <button onclick="sortTable('title')" class="flex items-center gap-2 font-semibold text-gray-700 hover:text-gray-900">
+                Title <span id="sort-title" class="text-gray-400">↕</span>
+              </button>
+            </div>
+            <div class="col-span-2">
+              <button onclick="sortTable('publication')" class="flex items-center gap-2 font-semibold text-gray-700 hover:text-gray-900">
+                Publication <span id="sort-publication" class="text-gray-400">↕</span>
+              </button>
+            </div>
+            <div class="col-span-1">
+              <button onclick="sortTable('author')" class="flex items-center gap-2 font-semibold text-gray-700 hover:text-gray-900">
+                Author <span id="sort-author" class="text-gray-400">↕</span>
+              </button>
+            </div>
+            <div class="col-span-1">
+              <button onclick="sortTable('country')" class="flex items-center gap-2 font-semibold text-gray-700 hover:text-gray-900">
+                Country <span id="sort-country" class="text-gray-400">↕</span>
+              </button>
+            </div>
+            <div class="col-span-1">
+              <button onclick="sortTable('category')" class="flex items-center gap-2 font-semibold text-gray-700 hover:text-gray-900">
+                Category <span id="sort-category" class="text-gray-400">↕</span>
+              </button>
+            </div>
+            <div class="col-span-2">
+              <button onclick="sortTable('date')" class="flex items-center gap-2 font-semibold text-gray-700 hover:text-gray-900">
+                Published Date <span id="sort-date" class="text-gray-400">↕</span>
+              </button>
+            </div>
+            <div class="col-span-2">
+              <button onclick="sortTable('description')" class="flex items-center gap-2 font-semibold text-gray-700 hover:text-gray-900">
+                Description <span id="sort-description" class="text-gray-400">↕</span>
+              </button>
+            </div>
+            <div class="col-span-1">
+              <span class="font-semibold text-gray-700">Link</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Results Grid -->
+        <div class="grid grid-cols-1 gap-4" id="articleGrid"></div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // --------------------------
+    // GLOBAL STATE
+    // --------------------------
+    let currentArticles = [];
+    let filteredArticles = [];
+    let currentPage = 1;
+    let itemsPerPage = 10;
+    let currentSort = { column: null, ascending: true };
+    let isApiKeyValidated = false;
+
+    // We'll store source info (id -> {category, country}) here
+    let sourceDataMap = {};
+
+    // --------------------------
+    // 1) VALIDATE KEY + FETCH SOURCES
+    // --------------------------
+    async function validateApiKey() {
+      const apiKey = document.getElementById('apiKey').value;
+      const statusDiv = document.getElementById('apiKeyStatus');
+      const searchButton = document.getElementById('searchButton');
+
+      if (!apiKey) {
+        statusDiv.innerHTML = '<span class="text-red-500">Please enter an API key</span>';
+        return;
+      }
+
+      try {
+        // Quick test call
+        const response = await fetch('https://newsapi.org/v2/top-headlines?country=us&pageSize=1', {
+          headers: { 'Authorization': `Bearer ${apiKey}` }
+        });
+
+        if (response.ok) {
+          statusDiv.innerHTML = '<span class="text-green-500">✓ API key is valid</span>';
+          searchButton.classList.remove('bg-gray-400', 'hover:bg-gray-500');
+          searchButton.classList.add('bg-blue-500', 'hover:bg-blue-600');
+          searchButton.disabled = false;
+          isApiKeyValidated = true;
+
+          // Now fetch all sources so we have category & country data
+          await fetchAllSources(apiKey);
+
+        } else {
+          statusDiv.innerHTML = '<span class="text-red-500">✗ Invalid API key</span>';
+          searchButton.classList.remove('bg-blue-500', 'hover:bg-blue-600');
+          searchButton.classList.add('bg-gray-400', 'hover:bg-gray-500');
+          searchButton.disabled = true;
+          isApiKeyValidated = false;
+        }
+      } catch (error) {
+        statusDiv.innerHTML = '<span class="text-red-500">✗ Error validating API key</span>';
+        searchButton.classList.remove('bg-blue-500', 'hover:bg-blue-600');
+        searchButton.classList.add('bg-gray-400', 'hover:bg-gray-500');
+        searchButton.disabled = true;
+        isApiKeyValidated = false;
+      }
+    }
+
+    // Fetch the list of sources from NewsAPI -> store in sourceDataMap
+    async function fetchAllSources(apiKey) {
+      try {
+        const url = 'https://newsapi.org/v2/sources?apiKey=' + encodeURIComponent(apiKey);
+        const response = await fetch(url);
+        const data = await response.json();
+
+        if (data.status === 'ok' && data.sources) {
+          data.sources.forEach(src => {
+            // src.id, src.name, src.description, src.url, src.category, src.language, src.country
+            sourceDataMap[src.id] = {
+              category: src.category || 'N/A',
+              country: src.country || 'N/A'
+            };
+          });
+        }
+      } catch (e) {
+        console.error('Error fetching sources:', e);
+      }
+    }
+
+    // --------------------------
+    // 2) SEARCH NEWS
+    // --------------------------
+    function handleSearchClick() {
+      if (!isApiKeyValidated) {
+        const statusDiv = document.getElementById('apiKeyStatus');
+        statusDiv.innerHTML = '<span class="text-red-500">Please validate your API key first</span>';
+        return;
+      }
+      searchNews();
+    }
+
+    async function searchNews() {
+      const apiKey = document.getElementById('apiKey').value;
+      const query = document.getElementById('searchQuery').value;
+      const language = document.getElementById('language').value;
+      const sortBy = document.getElementById('sortBy').value;
+      const fromDate = document.getElementById('fromDate').value;
+      const toDate = document.getElementById('toDate').value;
+
+      if (!query) {
+        alert('Please enter a search query');
+        return;
+      }
+
+      try {
+        let url = new URL('https://newsapi.org/v2/everything');
+        url.searchParams.append('q', query);
+        url.searchParams.append('language', language);
+        url.searchParams.append('sortBy', sortBy);
+        if (fromDate) url.searchParams.append('from', fromDate);
+        if (toDate) url.searchParams.append('to', toDate);
+
+        const response = await fetch(url, {
+          headers: { 'Authorization': `Bearer ${apiKey}` }
+        });
+
+        const data = await response.json();
+
+        if (response.ok) {
+          // 1) Enrich articles with category/country from sourceDataMap
+          let articles = data.articles.map(article => {
+            const sourceId = article.source?.id; // e.g. "cnn"
+            // If we know this source, attach its data
+            if (sourceId && sourceDataMap[sourceId]) {
+              return {
+                ...article,
+                category: sourceDataMap[sourceId].category,
+                country: sourceDataMap[sourceId].country
+              };
+            } else {
+              // Fallback
+              return {
+                ...article,
+                category: 'N/A',
+                country: 'N/A'
+              };
+            }
+          });
+
+          currentArticles = articles;
+          filteredArticles = articles;
+
+          // Show the results
+          document.getElementById('resultsSection').classList.remove('hidden');
+          currentSort = { column: null, ascending: true };
+          // Reset sort indicators
+          document.querySelectorAll('[id^="sort-"]').forEach(el => {
+            if (el) el.textContent = '↕';
+          });
+          updateTableDisplay();
+
+        } else {
+          alert(`Error: ${data.message}`);
+        }
+      } catch (error) {
+        alert('Error fetching results');
+        console.error('Error:', error);
+      }
+    }
+
+    // --------------------------
+    // 3) FILTER + SORT
+    // --------------------------
+    function filterTable() {
+      const searchTerm = document.getElementById('tableSearch').value.toLowerCase();
+      const filterColumn = document.getElementById('columnFilter').value;
+
+      filteredArticles = currentArticles.filter(article => {
+        // gather data from relevant fields
+        const title = (article.title || '').toLowerCase();
+        const pub = (article.source?.name || '').toLowerCase();
+        const author = (article.author || '').toLowerCase();
+        const country = (article.country || '').toLowerCase();
+        const category = (article.category || '').toLowerCase();
+        const date = (article.publishedAt || '').toLowerCase();
+        const desc = (article.description || '').toLowerCase();
+
+        // "all" means match if it appears in ANY field
+        if (filterColumn === 'all') {
+          return (
+            title.includes(searchTerm) ||
+            pub.includes(searchTerm) ||
+            author.includes(searchTerm) ||
+            country.includes(searchTerm) ||
+            category.includes(searchTerm) ||
+            date.includes(searchTerm) ||
+            desc.includes(searchTerm)
+          );
+        }
+
+        // Otherwise, check the specified column
+        switch (filterColumn) {
+          case 'title':
+            return title.includes(searchTerm);
+          case 'publication':
+            return pub.includes(searchTerm);
+          case 'author':
+            return author.includes(searchTerm);
+          case 'country':
+            return country.includes(searchTerm);
+          case 'category':
+            return category.includes(searchTerm);
+          case 'date':
+            return date.includes(searchTerm);
+          case 'description':
+            return desc.includes(searchTerm);
+          default:
+            return true;
+        }
+      });
+
+      const isFiltered = (filteredArticles.length !== currentArticles.length);
+
+      // Toggle "Export Filtered Results" & "Export Filtered Links" buttons
+      document.getElementById('exportFilteredBtn').classList.toggle('hidden', !isFiltered);
+      document.getElementById('exportLinksFilteredBtn').classList.toggle('hidden', !isFiltered);
+
+      currentPage = 1;
+      updateTableDisplay();
+    }
+
+    function sortTable(column) {
+      document.querySelectorAll('[id^="sort-"]').forEach(el => el.textContent = '↕');
+
+      if (currentSort.column === column) {
+        currentSort.ascending = !currentSort.ascending;
+      } else {
+        currentSort.column = column;
+        currentSort.ascending = true;
+      }
+
+      const indicator = document.getElementById(`sort-${column}`);
+      indicator.textContent = currentSort.ascending ? '↑' : '↓';
+
+      filteredArticles.sort((a, b) => {
+        let valueA, valueB;
+
+        switch(column) {
+          case 'title':
+            valueA = (a.title || '').toLowerCase();
+            valueB = (b.title || '').toLowerCase();
+            break;
+          case 'publication':
+            valueA = (a.source?.name || '').toLowerCase();
+            valueB = (b.source?.name || '').toLowerCase();
+            break;
+          case 'author':
+            valueA = (a.author || '').toLowerCase();
+            valueB = (b.author || '').toLowerCase();
+            break;
+          case 'country':
+            valueA = (a.country || '').toLowerCase();
+            valueB = (b.country || '').toLowerCase();
+            break;
+          case 'category':
+            valueA = (a.category || '').toLowerCase();
+            valueB = (b.category || '').toLowerCase();
+            break;
+          case 'date':
+            valueA = new Date(a.publishedAt || 0);
+            valueB = new Date(b.publishedAt || 0);
+            break;
+          case 'description':
+            valueA = (a.description || '').toLowerCase();
+            valueB = (b.description || '').toLowerCase();
+            break;
+          default:
+            // No sort
+            return 0;
+        }
+
+        if (valueA < valueB) return currentSort.ascending ? -1 : 1;
+        if (valueA > valueB) return currentSort.ascending ? 1 : -1;
+        return 0;
+      });
+
+      updateTableDisplay();
+    }
+
+    // --------------------------
+    // 4) PAGINATION
+    // --------------------------
+    function changeItemsPerPage() {
+      itemsPerPage = parseInt(document.getElementById('itemsPerPage').value);
+      currentPage = 1;
+      updateTableDisplay();
+    }
+
+    function updateTableDisplay() {
+      const startIndex = (currentPage - 1) * itemsPerPage;
+      const endIndex = startIndex + itemsPerPage;
+      const pageArticles = filteredArticles.slice(startIndex, endIndex);
+
+      const grid = document.getElementById('articleGrid');
+      grid.innerHTML = pageArticles.map(article => `
+        <div class="bg-white p-4 rounded-lg shadow hover:shadow-md transition-shadow">
+          <div class="grid grid-cols-12 gap-4">
+            <div class="col-span-2">
+              <h3 class="font-semibold text-gray-800 line-clamp-2">${article.title || 'No title'}</h3>
+            </div>
+            <div class="col-span-2">
+              <p class="text-sm text-gray-600">${article.source?.name || 'Unknown source'}</p>
+            </div>
+            <div class="col-span-1">
+              <p class="text-sm text-gray-600">${article.author || 'N/A'}</p>
+            </div>
+            <div class="col-span-1">
+              <p class="text-sm text-gray-600">${article.country || 'N/A'}</p>
+            </div>
+            <div class="col-span-1">
+              <p class="text-sm text-gray-600">${article.category || 'N/A'}</p>
+            </div>
+            <div class="col-span-2">
+              <p class="text-sm text-gray-600">${new Date(article.publishedAt).toLocaleDateString()}</p>
+            </div>
+            <div class="col-span-2">
+              <p class="text-sm text-gray-600 line-clamp-2">${article.description || 'No description'}</p>
+            </div>
+            <div class="col-span-1 flex items-center">
+              <a href="${article.url}" target="_blank" class="text-blue-500 hover:underline">Link</a>
+            </div>
+          </div>
+        </div>
+      `).join('');
+
+      addPaginationControls();
+    }
+
+    function addPaginationControls() {
+      const containerDiv = document.getElementById('articleGrid').parentNode;
+      const existingPagination = containerDiv.querySelector('.flex.justify-between');
+      if (existingPagination) {
+        existingPagination.remove();
+      }
+
+      const paginationDiv = document.createElement('div');
+      paginationDiv.className = 'flex justify-between items-center mt-4 bg-white p-4 rounded-lg shadow';
+
+      const totalPages = Math.ceil(filteredArticles.length / itemsPerPage) || 1;
+
+      paginationDiv.innerHTML = `
+        <div class="flex items-center gap-2">
+          <span class="text-sm text-gray-600">Total results: ${filteredArticles.length}</span>
+        </div>
+        <div class="flex items-center gap-2">
+          <button onclick="previousPage()" class="px-4 py-2 border rounded-lg hover:bg-gray-100 ${currentPage === 1 ? 'opacity-50 cursor-not-allowed' : ''}" ${currentPage === 1 ? 'disabled' : ''}>
+            Previous
+          </button>
+          <div class="flex items-center gap-2">
+            <input
+              type="number"
+              id="pageNumberInput"
+              min="1"
+              max="${totalPages}"
+              value="${currentPage}"
+              class="w-16 border rounded-lg px-2 py-1 text-center"
+            />
+            <span class="text-gray-600">of ${totalPages}</span>
+          </div>
+          <button onclick="nextPage()" class="px-4 py-2 border rounded-lg hover:bg-gray-100 ${currentPage === totalPages ? 'opacity-50 cursor-not-allowed' : ''}" ${currentPage === totalPages ? 'disabled' : ''}>
+            Next
+          </button>
+        </div>
+      `;
+
+      containerDiv.appendChild(paginationDiv);
+
+      const pageNumberInput = document.getElementById('pageNumberInput');
+      if (pageNumberInput) {
+        pageNumberInput.addEventListener('change', e => {
+          goToPage(e.target.value);
+        });
+      }
+    }
+
+    function nextPage() {
+      const totalPages = Math.ceil(filteredArticles.length / itemsPerPage) || 1;
+      if (currentPage < totalPages) {
+        currentPage++;
+        updateTableDisplay();
+      }
+    }
+
+    function previousPage() {
+      if (currentPage > 1) {
+        currentPage--;
+        updateTableDisplay();
+      }
+    }
+
+    function goToPage(pageNumber) {
+      const totalPages = Math.ceil(filteredArticles.length / itemsPerPage) || 1;
+      pageNumber = Math.max(1, Math.min(parseInt(pageNumber), totalPages));
+      currentPage = pageNumber;
+      updateTableDisplay();
+    }
+
+    // --------------------------
+    // 5) CSV EXPORTS (FULL + LINKS)
+    // --------------------------
+    function exportToCSV(filteredOnly = false) {
+      const dataToExport = filteredOnly ? filteredArticles : currentArticles;
+
+      if (dataToExport.length === 0) {
+        alert('No data to export');
+        return;
+      }
+
+      // Add new columns category/country here
+      const headers = [
+        'Title',
+        'Publication',
+        'Author',
+        'Country',
+        'Category',
+        'Published Date',
+        'Description',
+        'URL',
+        'Content'
+      ];
+      const csvRows = [headers];
+
+      dataToExport.forEach(article => {
+        csvRows.push([
+          article.title || '',
+          article.source?.name || '',
+          article.author || '',
+          article.country || '',
+          article.category || '',
+          article.publishedAt || '',
+          article.description || '',
+          article.url || '',
+          article.content || ''
+        ].map(cell => `"${(cell || '').toString().replace(/"/g, '""')}"`));
+      });
+
+      const csvContent = csvRows.join('\n');
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.download = `news_articles_${filteredOnly ? 'filtered_' : ''}${new Date().toISOString()}.csv`;
+      link.click();
+    }
+
+    function exportLinksToCSV(filteredOnly = false) {
+      const dataToExport = filteredOnly ? filteredArticles : currentArticles;
+
+      if (dataToExport.length === 0) {
+        alert('No data to export');
+        return;
+      }
+
+      const csvRows = [];
+      csvRows.push(['URL']); // single column
+
+      dataToExport.forEach(article => {
+        csvRows.push([article.url || '']);
+      });
+
+      const csvContent = csvRows
+        .map(row => row.map(cell => `"${cell.replace(/"/g, '""')}"`).join(','))
+        .join('\n');
+
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.download = `news_article_links_${filteredOnly ? 'filtered_' : ''}${new Date().toISOString()}.csv`;
+      link.click();
+    }
+
+    // --------------------------
+    // INIT
+    // --------------------------
+    document.addEventListener('DOMContentLoaded', () => {
+      // Reset sort indicators
+      document.querySelectorAll('[id^="sort-"]').forEach(el => {
+        if (el) el.textContent = '↕';
+      });
+    });
+  </script>
+</body>
+</html>
